@@ -17,15 +17,8 @@ export interface Country extends CountryRaw {
   risk_rating: string;
 }
 
-export type Provider = "offline" | "openai";
-
-export interface AiConfig {
-  provider: Provider;
-  model: string;
-  baseUrl: string;
-  apiKey: string;
-}
-
+// The /api/report wire payload (baseUrl/model/apiKey) is the per-provider
+// ProviderConfig defined in lib/providers.ts.
 export interface Sim {
   inflation: number;
   debt: number;

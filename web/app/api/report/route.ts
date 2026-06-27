@@ -4,7 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Generate a risk report via any OpenAI-compatible Chat Completions endpoint.
-// The offline provider is handled client-side, so this route only serves "openai".
+// The "offline" template is handled client-side; this route serves the remote
+// presets (DeepSeek / GLM / MiMo) and any OpenAI-compatible endpoint.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

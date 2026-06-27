@@ -2,10 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme tokens as space-separated RGB channels so Tailwind's `/opacity`
+   modifiers (bg-panel/60, bg-ink/50, …) resolve. Light is the default;
+   the `.dark` class on <html> swaps in the dark palette. */
+:root {
+  --bg: 245 247 250;
+  --panel: 255 255 255;
+  --ink: 238 241 246;
+  --edge: 216 221 230;
+  --fg: 26 29 36;
+  --muted: 91 100 114;
+  --accent: 228 87 86;
+  --hover: 17 24 39; /* dark overlay for hovers on light surfaces */
+}
+
+.dark {
+  --bg: 14 17 23;
+  --panel: 26 29 36;
+  --ink: 14 17 23;
+  --edge: 42 46 55;
+  --fg: 250 250 250;
+  --muted: 156 163 175;
+  --accent: 228 87 86;
+  --hover: 255 255 255; /* light overlay for hovers on dark surfaces */
+}
+
 html,
 body {
-  background-color: #0e1117;
-  color: #fafafa;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
 }
 
 * {
@@ -14,5 +39,5 @@ body {
 
 /* Range slider accent */
 input[type="range"] {
-  accent-color: #e45756;
+  accent-color: rgb(var(--accent));
 }

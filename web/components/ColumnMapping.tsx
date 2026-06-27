@@ -15,18 +15,18 @@ export default function ColumnMapping({
 }) {
   return (
     <div className="space-y-2 rounded-lg border border-edge bg-panel/60 p-3">
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-muted">
         将你的数据列对应到标准字段（带 * 为必填）。 Map your columns to the canonical fields.
       </p>
       <div className="grid grid-cols-1 gap-2">
         {FIELDS.map((f) => (
           <label key={f.key} className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-gray-300">
+            <span className="text-fg/80">
               {f.label}
               {f.required ? " *" : ""}
             </span>
             <select
-              className="w-40 rounded border border-edge bg-ink px-1.5 py-1 text-gray-200"
+              className="w-40 rounded border border-edge bg-ink px-1.5 py-1 text-fg/90"
               value={mapping[f.key] ?? NONE}
               onChange={(e) =>
                 onChange({ ...mapping, [f.key]: e.target.value === NONE ? null : e.target.value })

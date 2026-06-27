@@ -11,7 +11,7 @@ const H = 430;
 
 // Risk 0 (safe, green) -> 100 (risk, red), via yellow. Returns an HSL string.
 function colorFor(score: number | undefined): string {
-  if (score === undefined || score === null || Number.isNaN(score)) return "#2A2E37";
+  if (score === undefined || score === null || Number.isNaN(score)) return "rgb(var(--edge))";
   const s = Math.max(0, Math.min(100, score));
   const hue = 120 - (s / 100) * 120; // 120=green -> 0=red
   return `hsl(${hue}, 65%, 45%)`;
@@ -80,10 +80,10 @@ export default function RiskMap({
   }, [rows]);
 
   if (error) {
-    return <div className="text-sm text-red-400">地图加载失败 / Map failed: {error}</div>;
+    return <div className="text-sm text-red-500 dark:text-red-400">地图加载失败 / Map failed: {error}</div>;
   }
   if (!shapes) {
-    return <div className="text-sm text-gray-400 animate-pulse">加载地图… / Loading map…</div>;
+    return <div className="text-sm text-muted animate-pulse">加载地图… / Loading map…</div>;
   }
 
   return (
@@ -97,9 +97,11 @@ export default function RiskMap({
             <path
               key={i}
               d={s.d}
-              fill={colorFor(score)}
-              stroke={isSel ? "#fff" : "#0E1117"}
-              strokeWidth={isSel ? 1.4 : 0.4}
+              style={{
+                fill: colorFor(score),
+                stroke: isSel ? "rgb(var(--fg))" : "rgb(var(--bg))",
+                strokeWidth: isSel ? 1.4 : 0.4,
+              }}
               className={s.iso && scoreByIso.has(s.iso) ? "cursor-pointer" : ""}
               onClick={() => s.iso && scoreByIso.has(s.iso) && onSelect(s.iso)}
               onMouseMove={(e) => {
@@ -128,12 +130,12 @@ export default function RiskMap({
           {hover.text}
         </div>
       )}
-      <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+      <div className="mt-2 flex items-center gap-2 text-xs text-muted">
         <span>低风险 / low</span>
         <div className="h-2 w-40 rounded" style={{ background: "linear-gradient(90deg, hsl(120,65%,45%), hsl(60,65%,45%), hsl(0,65%,45%))" }} />
         <span>高风险 / high</span>
         <span className="ml-3 inline-flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#2A2E37" }} /> 无数据 / no data
+          <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "rgb(var(--edge))" }} /> 无数据 / no data
         </span>
       </div>
     </div>

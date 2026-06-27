@@ -8,9 +8,11 @@ import ColumnMapping from "@/components/ColumnMapping";
 import MarkdownView from "@/components/MarkdownView";
 import { autoMap, missingRequired, normalize, labelFor, Mapping } from "@/lib/schema";
 import { offlineReport, buildPrompt, ReportContext } from "@/lib/offlineReport";
-import { AiConfig, Country, Sim } from "@/lib/types";
+import { Country, Sim } from "@/lib/types";
+import { PROVIDER_PRESETS, ProviderConfig, defaultConfigs, presetById } from "@/lib/providers";
 
 type Source = "demo" | "upload" | "db";
+type Theme = "light" | "dark";
 
 export default function Page() {
   const [source, setSource] = useState<Source>("demo");
@@ -22,7 +24,12 @@ export default function Page() {
   const [selectedIso, setSelectedIso] = useState<string | null>(null);
   const [sim, setSim] = useState<Sim>({ inflation: 0, debt: 0 });
 
-  const [ai, setAi] = useState<AiConfig>({ provider: "offline", model: "deepseek-chat", baseUrl: "", apiKey: "" });
+  // AI: a chosen provider id plus a per-provider config so switching never
+  // clobbers another provider's key/baseUrl/model.
+  const [provider, setProvider] = useState<string>("offline");
+  const [configs, setConfigs] = useState<Record<string, ProviderConfig>>(() => defaultConfigs());
+
+  const [theme, setTheme] = useState<Theme>("dark");
 
   const [report, setReport] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
@@ -34,6 +41,28 @@ export default function Page() {
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Sync theme state with the class the pre-paint script already applied.
+  useEffect(() => {
+    setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+  }, []);
+
+  const toggleTheme = () => {
+    // Read the truth from the DOM class (set pre-paint) so the toggle is
+    // correct even before the sync effect has reconciled `theme`.
+    const root = document.documentElement;
+    const next: Theme = root.classList.contains("dark") ? "light" : "dark";
+    root.classList.toggle("dark", next === "dark");
+    try {
+      localStorage.setItem("grw-theme", next);
+    } catch {
+      /* storage unavailable — ignore */
+    }
+    setTheme(next);
+  };
+
+  const updateCfg = (patch: Partial<ProviderConfig>) =>
+    setConfigs((c) => ({ ...c, [provider]: { ...c[provider], ...patch } }));
 
   const ingest = useCallback((rows: Record<string, unknown>[]) => {
     const cols = rows.length ? Object.keys(rows[0]) : [];
@@ -145,11 +174,12 @@ export default function Page() {
     if (!selected) return;
     setReportError(null);
     const ctx = buildContext();
-    if (ai.provider === "offline") {
+    if (provider === "offline") {
       setReport(offlineReport(ctx));
       return;
     }
-    if (!ai.baseUrl || !ai.apiKey) {
+    const cfg = configs[provider];
+    if (!cfg?.baseUrl || !cfg?.apiKey) {
       setReportError("请填写 Base URL 与 API Key，或切换到 offline。");
       return;
     }
@@ -159,7 +189,7 @@ export default function Page() {
       const resp = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt(ctx), ai }),
+        body: JSON.stringify({ prompt: buildPrompt(ctx), ai: cfg }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data?.error ?? `HTTP ${resp.status}`);
@@ -188,15 +218,37 @@ export default function Page() {
   };
 
   const ratingColor = (r: string) =>
-    r.startsWith("A") ? "text-emerald-400" : r.startsWith("B") ? "text-amber-400" : "text-red-400";
+    r.startsWith("A")
+      ? "text-emerald-600 dark:text-emerald-400"
+      : r.startsWith("B")
+      ? "text-amber-600 dark:text-amber-400"
+      : "text-red-600 dark:text-red-400";
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[1500px] flex-col gap-4 p-4 lg:flex-row">
       {/* Sidebar */}
       <aside className="w-full shrink-0 space-y-4 lg:w-80">
-        <div>
-          <h1 className="text-xl font-bold">🌍 Global Risk Watch</h1>
-          <p className="text-xs text-gray-400">宏观风险预警 · Next.js demo</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-xl font-bold">🌍 Global Risk Watch</h1>
+            <p className="text-xs text-muted">宏观风险预警 · Next.js demo</p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            aria-pressed={theme === "dark"}
+            aria-label="切换浅色 / 深色主题 / Toggle light or dark theme"
+            title="切换主题 / Toggle theme"
+            className="shrink-0 rounded-lg border border-edge bg-panel p-2 text-fg/80 hover:bg-hover/10"
+          >
+            {/* Both icons render identically on server & client; CSS (the .dark
+                class set pre-paint) picks which is visible — no flash, no mismatch. */}
+            <span className="hidden dark:block">
+              <SunIcon />
+            </span>
+            <span className="block dark:hidden">
+              <MoonIcon />
+            </span>
+          </button>
         </div>
 
         {/* Data source */}
@@ -208,7 +260,7 @@ export default function Page() {
                 key={s}
                 onClick={() => switchSource(s)}
                 className={`rounded px-2 py-1.5 ${
-                  source === s ? "bg-[#E45756] text-white" : "bg-ink text-gray-300 hover:bg-white/5"
+                  source === s ? "bg-accent text-white" : "bg-ink text-fg/70 hover:bg-hover/10"
                 }`}
               >
                 {s === "demo" ? "演示" : s === "upload" ? "上传" : "数据库"}
@@ -222,9 +274,9 @@ export default function Page() {
                 type="file"
                 accept=".csv"
                 onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])}
-                className="block w-full text-xs text-gray-300 file:mr-2 file:rounded file:border-0 file:bg-[#E45756] file:px-2 file:py-1 file:text-white"
+                className="block w-full text-xs text-fg/80 file:mr-2 file:rounded file:border-0 file:bg-accent file:px-2 file:py-1 file:text-white"
               />
-              <p className="text-[11px] text-gray-500">需含 ISO-3 代码列。Needs an ISO-3 code column.</p>
+              <p className="text-[11px] text-muted/80">需含 ISO-3 代码列。Needs an ISO-3 code column.</p>
             </div>
           )}
 
@@ -254,12 +306,12 @@ export default function Page() {
               <button
                 onClick={connectDb}
                 disabled={dbLoading}
-                className="w-full rounded bg-[#E45756] px-2 py-1.5 text-xs text-white disabled:opacity-50"
+                className="w-full rounded bg-accent px-2 py-1.5 text-xs text-white disabled:opacity-50"
               >
                 {dbLoading ? "连接中…" : "🔌 连接 / Connect"}
               </button>
-              {dbError && <p className="text-[11px] text-red-400">{dbError}</p>}
-              <p className="text-[11px] text-gray-500">
+              {dbError && <p className="text-[11px] text-red-500 dark:text-red-400">{dbError}</p>}
+              <p className="text-[11px] text-muted/80">
                 仅支持可被服务器访问的 Postgres（如 Neon / Supabase）。连接串不会被保存。
               </p>
             </div>
@@ -268,52 +320,71 @@ export default function Page() {
           {columns.length > 0 && (source === "upload" || source === "db") && (
             <ColumnMapping columns={columns} mapping={mapping} onChange={setMapping} />
           )}
-          {notice && <p className="text-[11px] text-amber-400">{notice}</p>}
+          {notice && <p className="text-[11px] text-amber-600 dark:text-amber-400">{notice}</p>}
         </section>
 
         {/* AI settings */}
         <section className="space-y-2 rounded-lg border border-edge bg-panel p-3">
           <h2 className="text-sm font-semibold">🤖 AI 设置 / AI settings</h2>
           <select
-            value={ai.provider}
-            onChange={(e) => setAi({ ...ai, provider: e.target.value as AiConfig["provider"] })}
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
             className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
           >
             <option value="offline">offline · 离线模板（零配置）</option>
-            <option value="openai">openai · OpenAI / DeepSeek 兼容 API</option>
+            {PROVIDER_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
           </select>
-          {ai.provider === "openai" && (
-            <div className="space-y-1.5">
-              <input
-                type="text"
-                placeholder="Base URL，如 https://api.deepseek.com/v1"
-                value={ai.baseUrl}
-                onChange={(e) => setAi({ ...ai, baseUrl: e.target.value })}
-                className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
-              />
-              <input
-                type="text"
-                placeholder="模型，如 deepseek-chat"
-                value={ai.model}
-                onChange={(e) => setAi({ ...ai, model: e.target.value })}
-                className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
-              />
-              <input
-                type="password"
-                placeholder="API Key"
-                value={ai.apiKey}
-                onChange={(e) => setAi({ ...ai, apiKey: e.target.value })}
-                className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
-              />
-              <p className="text-[11px] text-gray-500">Key 仅用于本次请求转发，不会被保存。</p>
-            </div>
-          )}
+          {provider !== "offline" &&
+            (() => {
+              const cfg = configs[provider];
+              const preset = presetById(provider);
+              return (
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    placeholder="Base URL，如 https://api.deepseek.com/v1"
+                    value={cfg.baseUrl}
+                    onChange={(e) => updateCfg({ baseUrl: e.target.value })}
+                    className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder="模型，如 deepseek-chat"
+                    value={cfg.model}
+                    onChange={(e) => updateCfg({ model: e.target.value })}
+                    className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
+                  />
+                  <input
+                    type="password"
+                    placeholder="API Key"
+                    value={cfg.apiKey}
+                    onChange={(e) => updateCfg({ apiKey: e.target.value })}
+                    className="w-full rounded border border-edge bg-ink px-2 py-1 text-xs"
+                  />
+                  <p className="text-[11px] text-muted/80">
+                    {preset?.hint} Key 仅用于本次请求转发，不会被保存。
+                    {preset?.keyUrl && (
+                      <>
+                        {" "}
+                        <a className="text-sky-500" href={preset.keyUrl} target="_blank" rel="noreferrer">
+                          获取 Key ↗
+                        </a>
+                      </>
+                    )}
+                  </p>
+                </div>
+              );
+            })()}
         </section>
 
         {/* Filter */}
         <section className="space-y-1 rounded-lg border border-edge bg-panel p-3">
           <h2 className="text-sm font-semibold">⚠️ 过滤 / Filter</h2>
-          <label className="text-xs text-gray-400">最低风险分 / Min risk: {minRisk}</label>
+          <label className="text-xs text-muted">最低风险分 / Min risk: {minRisk}</label>
           <input
             type="range"
             min={0}
@@ -328,7 +399,7 @@ export default function Page() {
       {/* Main */}
       <main className="flex-1 space-y-4">
         {missing.length > 0 ? (
-          <div className="rounded-lg border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-300">
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
             数据缺少必填列：{missing.map(labelFor).join("、")}。请在「列映射」中指定。
           </div>
         ) : (
@@ -372,12 +443,12 @@ export default function Page() {
                   {/* Sandbox */}
                   <div className="grid grid-cols-1 gap-3 rounded-lg border border-edge bg-ink/50 p-3 sm:grid-cols-2">
                     <div>
-                      <label className="text-xs text-gray-400">假设通胀率 / Inflation: {sim.inflation}%</label>
+                      <label className="text-xs text-muted">假设通胀率 / Inflation: {sim.inflation}%</label>
                       <input type="range" min={0} max={500} step={0.5} value={sim.inflation}
                         onChange={(e) => setSim({ ...sim, inflation: Number(e.target.value) })} className="w-full" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-400">假设外债率 / External debt: {sim.debt}%</label>
+                      <label className="text-xs text-muted">假设外债率 / External debt: {sim.debt}%</label>
                       <input type="range" min={0} max={300} step={0.5} value={sim.debt}
                         onChange={(e) => setSim({ ...sim, debt: Number(e.target.value) })} className="w-full" />
                     </div>
@@ -387,21 +458,21 @@ export default function Page() {
                     <button
                       onClick={generate}
                       disabled={reportLoading}
-                      className="rounded-lg bg-[#E45756] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                      className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                     >
                       {reportLoading ? "生成中…" : isModified ? "🧪 运行沙盘推演" : "🚀 生成深度研报"}
                     </button>
                     {isModified && (
                       <button
                         onClick={() => setSim({ inflation: realInf ?? 0, debt: realDebt ?? 0 })}
-                        className="rounded-lg border border-edge px-3 py-2 text-sm text-gray-300 hover:bg-white/5"
+                        className="rounded-lg border border-edge px-3 py-2 text-sm text-fg/80 hover:bg-hover/10"
                       >
                         🔙 重置
                       </button>
                     )}
-                    {isModified && <span className="text-xs text-amber-400">🔥 沙盘模拟模式</span>}
+                    {isModified && <span className="text-xs text-amber-600 dark:text-amber-400">🔥 沙盘模拟模式</span>}
                   </div>
-                  {reportError && <p className="text-xs text-red-400">{reportError}</p>}
+                  {reportError && <p className="text-xs text-red-500 dark:text-red-400">{reportError}</p>}
                 </>
               )}
 
@@ -418,7 +489,7 @@ export default function Page() {
                       a.click();
                       URL.revokeObjectURL(url);
                     }}
-                    className="mt-3 rounded border border-edge px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+                    className="mt-3 rounded border border-edge px-3 py-1.5 text-xs text-fg/80 hover:bg-hover/10"
                   >
                     📥 下载报告 / Download
                   </button>
@@ -426,7 +497,7 @@ export default function Page() {
               )}
             </section>
 
-            <footer className="pb-6 text-center text-[11px] text-gray-600">
+            <footer className="pb-6 text-center text-[11px] text-muted/70">
               演示数据与默认风险模型仅供展示，非投资建议 · Illustrative demo, not investment advice ·{" "}
               <a className="text-sky-500" href="https://github.com/Epiphany-Leon/global-risk-watch">
                 GitHub
@@ -452,9 +523,26 @@ function Metric({
 }) {
   return (
     <div className="rounded-lg border border-edge bg-ink/50 p-2.5">
-      <div className="text-[11px] text-gray-500">{label}</div>
+      <div className="text-[11px] text-muted">{label}</div>
       <div className={`text-lg font-semibold ${className ?? ""}`}>{value}</div>
-      {delta && <div className="text-[11px] text-gray-500">Δ {delta}</div>}
+      {delta && <div className="text-[11px] text-muted">Δ {delta}</div>}
     </div>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
   );
 }
