@@ -17,3 +17,11 @@ env/
 # Local data outputs from the ETL scripts (the committed demo file is kept)
 /data/world_bank.csv
 *.db
+
+# Editor / tooling
+.claude/
+
+# Next.js web demo build artifacts (see web/.gitignore for the rest)
+web/node_modules/
+web/.next/
+web/.vercel/

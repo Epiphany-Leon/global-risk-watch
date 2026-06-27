@@ -11,6 +11,21 @@
 
 ---
 
+## 🌐 Two ways to run / 两种形态
+
+| | Stack | Best for | Hosting |
+|---|-------|----------|---------|
+| **Python framework** (repo root) | Streamlit + SQLAlchemy | the extensible **framework** — connect any SQLAlchemy database, plug in your own risk model / AI provider | local / Streamlit Cloud |
+| **Web demo** ([`web/`](web/)) | Next.js + TypeScript | a polished, shareable **demo** deployable to **Vercel** | Vercel (one-command CLI deploy) |
+
+Both share the same concepts (data sources, canonical schema, pluggable risk model, AI provider). See [`web/README.md`](web/README.md) for the Next.js app.
+
+```bash
+cd web && npm install && npm run dev      # http://localhost:3000, zero config
+```
+
+---
+
 ## ✨ Features / 功能
 
 - 🗺️ **Interactive risk heatmap** — Plotly choropleth colored by a 0–100 risk score.
