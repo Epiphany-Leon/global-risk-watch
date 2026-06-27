@@ -1,0 +1,10 @@
+[theme]
+primaryColor = "#E45756"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1D24"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[server]
+# Files uploaded in the app can be up to this many MB.
+maxUploadSize = 50

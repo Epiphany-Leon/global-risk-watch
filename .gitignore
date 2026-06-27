@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Secrets & local config (templates ending in .example ARE committed)
+.env
+.streamlit/secrets.toml
+
+# Local data outputs from the ETL scripts (the committed demo file is kept)
+/data/world_bank.csv
+*.db

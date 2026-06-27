@@ -1,0 +1,19 @@
+# --- Core (required to run the app + demo) ---
+streamlit>=1.30.0
+pandas>=2.0.0
+plotly>=5.18.0
+SQLAlchemy>=2.0.0
+openpyxl>=3.1.0          # Excel (.xlsx) upload support
+requests>=2.31.0         # used by the optional data-fetch scripts
+
+# --- Optional database drivers (install the one you use) ---
+psycopg2-binary>=2.9.0   # PostgreSQL
+# PyMySQL>=1.1.0         # MySQL / MariaDB
+# (SQLite needs no extra driver)
+
+# --- Optional AI providers (the app also has a zero-config offline mode) ---
+# ollama>=0.3.0          # local LLM via Ollama
+# openai>=1.30.0         # OpenAI / DeepSeek / any OpenAI-compatible endpoint
+
+# --- Optional: real-data ETL script (scripts/fetch_world_bank.py) ---
+# wbgapi>=1.0.12         # World Bank API client
