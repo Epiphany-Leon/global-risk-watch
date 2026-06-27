@@ -13,10 +13,12 @@
 
 ## 🌐 Two ways to run / 两种形态
 
+**▶ Live demo (Next.js on Vercel): https://global-risk-watch.vercel.app**
+
 | | Stack | Best for | Hosting |
 |---|-------|----------|---------|
 | **Python framework** (repo root) | Streamlit + SQLAlchemy | the extensible **framework** — connect any SQLAlchemy database, plug in your own risk model / AI provider | local / Streamlit Cloud |
-| **Web demo** ([`web/`](web/)) | Next.js + TypeScript | a polished, shareable **demo** deployable to **Vercel** | Vercel (one-command CLI deploy) |
+| **Web demo** ([`web/`](web/)) | Next.js + TypeScript | a polished, shareable **demo** deployable to **Vercel** | **[live](https://global-risk-watch.vercel.app)** · one-command CLI deploy |
 
 Both share the same concepts (data sources, canonical schema, pluggable risk model, AI provider). See [`web/README.md`](web/README.md) for the Next.js app.
 

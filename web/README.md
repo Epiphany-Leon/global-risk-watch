@@ -1,5 +1,7 @@
 # Global Risk Watch — Web demo (Next.js)
 
+**▶ Live: https://global-risk-watch.vercel.app**
+
 The Next.js version of the demo, deployable to **Vercel**. Mirrors the Python
 framework's concepts (data sources, pluggable risk model, AI provider) in the
 browser.
